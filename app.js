@@ -13,11 +13,6 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Tempel link videonya dulu!");
-    
-    if(url.includes('youtube.com') || url.includes('youtu.be')) {
-        return alert("Fitur Download saat ini fokus ke TikTok. Untuk YouTube, silakan langsung klik 'Bedah Isi'!");
-    }
-
     showLoader("Mencari Video...");
     try {
         const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
@@ -28,40 +23,53 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
             document.getElementById('videoTitle').innerText = v.title || "Video Ditemukan";
             document.getElementById('finalDownload').href = v.play || v.url;
             document.getElementById('videoResult').classList.remove('hidden');
-            document.getElementById('aiResult').classList.add('hidden');
         } else { alert("Video tidak ditemukan."); }
     } catch (e) { alert("Error koneksi."); }
     hideLoader();
 });
 
-// 3. Fitur Bedah Isi (Support TikTok & YouTube)
+// 3. Fitur Bedah Isi (Support YouTube & TikTok)
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Masukkan link video!");
+    if(!url) return alert("Masukkan link video/podcast!");
 
-    showLoader("Menyiapkan Bedah Isi (Podcast Mode)...");
+    showLoader("Mengekstrak Media...");
     
     try {
-        let finalMediaUrl = url;
+        let finalMediaUrl = "";
 
-        // LOGIKA DETEKSI TIKTOK
+        // JEMBATAN TIKTOK (TikWM)
         if (url.includes('tiktok.com')) {
             const tikRes = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
             const tikJson = await tikRes.json();
             if (tikJson.data && tikJson.data.play) {
                 finalMediaUrl = tikJson.data.play;
-            } else {
-                throw new Error("Gagal mengekstrak video TikTok.");
-            }
+            } else { throw new Error("Gagal ambil video TikTok."); }
         } 
-        // LOGIKA DETEKSI YOUTUBE
+        // JEMBATAN YOUTUBE (Cobalt API)
         else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            // Catatan: AssemblyAI butuh link stream. 
-            // Untuk YouTube, kita kirim linknya langsung, biarkan API Backend/AssemblyAI yang menghandle.
-            finalMediaUrl = url; 
+            const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    url: url,
+                    downloadMode: 'audio', // Ambil audio saja biar cepat & hemat
+                    audioFormat: 'mp3'
+                })
+            });
+            const cobaltJson = await cobaltRes.json();
+            if (cobaltJson.url) {
+                finalMediaUrl = cobaltJson.url;
+            } else { throw new Error("YouTube API sedang sibuk, coba lagi nanti."); }
+        } else {
+            throw new Error("Link tidak didukung. Gunakan TikTok atau YouTube.");
         }
 
         // KIRIM KE BACKEND AI
+        showLoader("AI Sedang Mendengarkan...");
         const aiRes = await fetch('/api/process-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -69,10 +77,9 @@ document.getElementById('btnAi').addEventListener('click', async () => {
                 audio_url: finalMediaUrl,
                 speech_models: ["universal-3-pro", "universal-2"],
                 language_detection: true,
-                // SETTING KHUSUS PODCAST (Agar hasilnya lebih dalam)
                 summarization: true,
                 summary_model: "informative",
-                summary_type: "bullets" // Hasil berupa poin-poin penting
+                summary_type: "bullets"
             })
         });
         
@@ -94,17 +101,12 @@ async function checkAiStatus(id) {
             const res = await fetch(`/api/process-ai?id=${id}`);
             const data = await res.json();
             
-            // Berikan update teks di loader agar user tahu AI sedang bekerja
-            if(data.status === 'processing') {
-                document.getElementById('loaderText').innerText = "AI sedang mendengarkan podcast...";
-            }
-
             if (data.status === 'completed') {
                 clearInterval(interval);
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI Gagal Bedah Podcast: " + (data.error || "Durasi terlalu panjang atau link tidak didukung."));
+                alert("AI Gagal: " + (data.error || "Cek link video."));
                 hideLoader();
             }
         } catch (e) { clearInterval(interval); }
@@ -116,23 +118,16 @@ function showAiResult(data) {
     document.getElementById('videoResult').classList.add('hidden');
     document.getElementById('aiResult').classList.remove('hidden');
     const summaryBox = document.getElementById('aiSummary');
-
-    // Tampilan Khusus Bedah Isi ala Podcast
-    const summaryHTML = `
-        <div class="space-y-4">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="bg-red-500 text-white text-[10px] px-2 py-1 rounded-full uppercase font-bold">Podcast Summary</span>
-                <span class="text-slate-400 text-[10px]">Bedah Isi By Riksan AI</span>
-            </div>
-            <div class="text-slate-700 text-sm leading-relaxed border-l-4 border-red-500 pl-4">
-                ${data.summary ? data.summary.replace(/\n/g, '<br>') : "AI tidak menemukan poin penting."}
-            </div>
-            <div class="mt-4 pt-4 border-t border-dashed border-slate-200">
-                <p class="text-[11px] text-slate-400 italic font-medium">Kesimpulan Otomatis Berdasarkan Model Universal-3-Pro</p>
+    
+    // Tampilan ala Podcast Summary
+    summaryBox.innerHTML = `
+        <div class="border-l-4 border-red-500 pl-4 py-1">
+            <p class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-2">Podcast Insight</p>
+            <div class="text-slate-700 text-sm leading-relaxed">
+                ${data.summary ? data.summary.replace(/\n/g, '<br>') : data.text}
             </div>
         </div>
     `;
-    summaryBox.innerHTML = summaryHTML;
 }
 
 function showLoader(text) {
