@@ -1,0 +1,138 @@
+/* Custom CSS - Riksan Project AI Factory */
+
+body {
+    background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    color: #f8fafc;
+}
+
+/* Tags Styling */
+.tag {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #a5b4fc;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+/* Glassmorphism Card */
+.premium-card {
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 2.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    color: #1e293b;
+}
+
+/* Input Styling */
+.input-group {
+    background: #f8fafc;
+    border-radius: 1.5rem;
+    display: flex;
+    align-items: center;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.input-group:focus-within {
+    border-color: #6366f1;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+.paste-btn {
+    margin-right: 10px;
+    background: #ffffff;
+    padding: 10px 20px;
+    border-radius: 1rem;
+    font-size: 10px;
+    font-weight: 800;
+    color: #4f46e5;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.paste-btn:active {
+    transform: scale(0.95);
+}
+
+/* Button Styling */
+.btn-main {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #ffffff;
+    padding: 20px;
+    border-radius: 1.5rem;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: uppercase;
+}
+
+.btn-main:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.4);
+}
+
+.btn-ai {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 20px;
+    border-radius: 1.5rem;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.btn-ai:hover {
+    background: #1e293b;
+    transform: translateY(-3px);
+}
+
+/* Loader Spinner */
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-left-color: #818cf8;
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Animations */
+.slide-up {
+    animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Responsive Tweaks */
+@media (max-width: 640px) {
+    .premium-card {
+        border-radius: 2rem;
+    }
+    .btn-main, .btn-ai {
+        padding: 18px;
+        font-size: 12px;
+    }
+  }
