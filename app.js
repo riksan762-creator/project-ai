@@ -1,7 +1,7 @@
 const videoInput = document.getElementById('videoUrl');
 const loader = document.getElementById('loader');
 
-// Fitur Paste
+// 1. Fitur Paste Otomatis
 document.getElementById('btnPaste').addEventListener('click', async () => {
     try {
         const text = await navigator.clipboard.readText();
@@ -9,10 +9,11 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
     } catch (e) { videoInput.focus(); }
 });
 
-// Fitur Download
+// 2. Fitur Download Video
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Tempel link videonya dulu!");
+    if(!url) return alert("Tempel link videonya dulu, Bos!");
+
     showLoader("Mencari Video...");
     try {
         const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
@@ -24,27 +25,28 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
             document.getElementById('finalDownload').href = v.play || v.url;
             document.getElementById('videoResult').classList.remove('hidden');
             document.getElementById('aiResult').classList.add('hidden');
-        } else { alert("Video tidak ditemukan."); }
-    } catch (e) { alert("Error koneksi."); }
+        } else {
+            alert("Video tidak ditemukan atau private.");
+        }
+    } catch (e) { alert("Error koneksi downloader."); }
     hideLoader();
 });
 
-// Fitur AI (MENGGUNAKAN MODEL BEST AGAR SUMMARIZATION JALAN)
+// 3. Fitur AI (BEDAH ISI) - FIX 100% SESUAI DOKUMENTASI
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Masukkan link video!");
+    if(!url) return alert("Masukkan link video dulu!");
 
-    showLoader("AI Sedang Menganalisis...");
+    showLoader("AI Sedang Membedah Konten...");
     try {
         const start = await fetch('/api/process-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 audio_url: url,
-                // Menggunakan model 'best' karena 'universal-3-pro' belum support summarization
-                speech_model: "best", 
-                language_code: "id", 
-                summarization: true,
+                speech_model: "best",      // Gunakan 'best' agar summarization aktif
+                language_code: "id",       // Paksa ke Bahasa Indonesia
+                summarization: true,       // Aktifkan rangkuman
                 summary_model: "informative",
                 summary_type: "bullets"
             })
@@ -67,13 +69,13 @@ async function checkAiStatus(id) {
         try {
             const res = await fetch(`/api/process-ai?id=${id}`);
             const data = await res.json();
-            
+
             if (data.status === 'completed') {
                 clearInterval(interval);
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI Gagal Memproses. Pastikan link video benar dan durasi cukup.");
+                alert("AI Gagal: " + (data.error || "Pastikan link video benar."));
                 hideLoader();
             }
         } catch (e) {
@@ -89,8 +91,10 @@ function showAiResult(data) {
     document.getElementById('aiResult').classList.remove('hidden');
     
     const summaryBox = document.getElementById('aiSummary');
-    // Jika rangkuman ada, tampilkan. Jika tidak, kasih pesan ramah.
-    summaryBox.innerText = data.summary || "AI sudah memproses, tapi tidak menemukan poin penting untuk dirangkum.";
+    // Menampilkan hasil rangkuman dengan rapi
+    summaryBox.innerHTML = `<div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-slate-700 leading-relaxed">
+        ${data.summary ? data.summary.replace(/\n/g, '<br>') : 'Hasil tidak ditemukan.'}
+    </div>`;
 }
 
 function showLoader(text) {
