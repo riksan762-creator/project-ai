@@ -29,7 +29,7 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
     hideLoader();
 });
 
-// Fitur AI (Disederhanakan agar Stabil)
+// Fitur AI (MENGGUNAKAN MODEL BEST AGAR SUMMARIZATION JALAN)
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Masukkan link video!");
@@ -41,7 +41,9 @@ document.getElementById('btnAi').addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 audio_url: url,
-                speech_models: ["universal-3-pro"], // Pakai 1 model utama saja
+                // Menggunakan model 'best' karena 'universal-3-pro' belum support summarization
+                speech_model: "best", 
+                language_code: "id", 
                 summarization: true,
                 summary_model: "informative",
                 summary_type: "bullets"
@@ -52,7 +54,7 @@ document.getElementById('btnAi').addEventListener('click', async () => {
         if(initialData.id) {
             checkAiStatus(initialData.id);
         } else {
-            throw new Error(initialData.error || "Gagal inisialisasi");
+            throw new Error(initialData.error || "Gagal inisialisasi AI");
         }
     } catch (e) {
         alert("Gagal: " + e.message);
@@ -66,14 +68,12 @@ async function checkAiStatus(id) {
             const res = await fetch(`/api/process-ai?id=${id}`);
             const data = await res.json();
             
-            console.log("Status AI:", data.status); // Cek di console log HP/Laptop
-
             if (data.status === 'completed') {
                 clearInterval(interval);
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI Gagal: " + (data.error || "Cek link video Anda."));
+                alert("AI Gagal Memproses. Pastikan link video benar dan durasi cukup.");
                 hideLoader();
             }
         } catch (e) {
@@ -88,9 +88,9 @@ function showAiResult(data) {
     document.getElementById('videoResult').classList.add('hidden');
     document.getElementById('aiResult').classList.remove('hidden');
     
-    // Pastikan ID element ini ada di HTML Bos
     const summaryBox = document.getElementById('aiSummary');
-    summaryBox.innerText = data.summary || "Rangkuman tidak tersedia untuk video ini.";
+    // Jika rangkuman ada, tampilkan. Jika tidak, kasih pesan ramah.
+    summaryBox.innerText = data.summary || "AI sudah memproses, tapi tidak menemukan poin penting untuk dirangkum.";
 }
 
 function showLoader(text) {
