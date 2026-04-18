@@ -9,10 +9,10 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
     } catch (e) { videoInput.focus(); }
 });
 
-// 2. Fitur Download Video (TikWM API)
+// 2. Fitur Download Video
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Tempel link videonya dulu, Bos!");
+    if(!url) return alert("Tempel link videonya dulu!");
 
     showLoader("Mencari Video...");
     try {
@@ -26,41 +26,48 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
             document.getElementById('videoResult').classList.remove('hidden');
             document.getElementById('aiResult').classList.add('hidden');
         } else {
-            alert("Video tidak ditemukan. Pastikan link benar.");
+            alert("Video tidak ditemukan.");
         }
-    } catch (e) {
-        alert("Error koneksi ke downloader.");
-    }
+    } catch (e) { alert("Error koneksi downloader."); }
     hideLoader();
 });
 
-// 3. Fitur AI (BEDAH ISI) - FIXED SESUAI DOKUMENTASI TERBARU
+// 3. Fitur AI (BEDAH ISI) - KHUSUS LINK TIKTOK
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Masukkan link video untuk dibedah!");
+    if(!url) return alert("Masukkan link TikTok dulu!");
 
-    showLoader("AI Sedang Membedah Konten...");
+    showLoader("Ekstrak Video & Analisis AI...");
     try {
-        const start = await fetch('/api/process-ai', {
+        // STEP A: Ambil link file asli (.mp4) dari TikWM
+        const tikRes = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
+        const tikJson = await tikRes.json();
+        
+        if (!tikJson.data || !tikJson.data.play) {
+            throw new Error("Gagal mengambil file video asli. Cek link TikTok-nya.");
+        }
+
+        const fileVideoAsli = tikJson.data.play; // Ini link .mp4 yang mau didengar AI
+
+        // STEP B: Kirim link .mp4 tersebut ke AssemblyAI
+        const aiRes = await fetch('/api/process-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                audio_url: url,
-                // Perbaikan Utama: Menggunakan format Plural & Array sesuai screenshot error
-                speech_models: ["universal-3-pro", "universal-2"], 
-                language_detection: true, 
+                audio_url: fileVideoAsli, // KIRIM FILE, BUKAN LINK WEB
+                speech_models: ["universal-3-pro", "universal-2"],
+                language_detection: true,
                 summarization: true,
                 summary_model: "informative",
                 summary_type: "bullets"
             })
         });
         
-        const initialData = await start.json();
+        const initialData = await aiRes.json();
         if(initialData.id) {
             checkAiStatus(initialData.id);
         } else {
-            // Menangkap pesan error detail dari server
-            throw new Error(initialData.error || initialData.message || "Gagal inisialisasi AI");
+            throw new Error(initialData.error || "Gagal inisialisasi AI");
         }
     } catch (e) {
         alert("Gagal: " + e.message);
@@ -68,44 +75,35 @@ document.getElementById('btnAi').addEventListener('click', async () => {
     }
 });
 
-// 4. Fungsi Polling (Cek Status AI)
+// 4. Polling Status
 async function checkAiStatus(id) {
     const interval = setInterval(async () => {
         try {
             const res = await fetch(`/api/process-ai?id=${id}`);
             const data = await res.json();
-
             if (data.status === 'completed') {
                 clearInterval(interval);
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI Gagal: " + (data.error || "Proses gagal."));
+                alert("AI Gagal: " + (data.error || "Cek suara video."));
                 hideLoader();
             }
-        } catch (e) {
-            clearInterval(interval);
-            hideLoader();
-        }
-    }, 3000); // Cek setiap 3 detik sesuai standar dokumen
+        } catch (e) { clearInterval(interval); }
+    }, 3000);
 }
 
-// 5. Menampilkan Hasil Bedah AI
+// 5. Tampilkan Hasil
 function showAiResult(data) {
     hideLoader();
     document.getElementById('videoResult').classList.add('hidden');
     document.getElementById('aiResult').classList.remove('hidden');
-    
     const summaryBox = document.getElementById('aiSummary');
-    // Jika summarization aktif, tampilkan summary. Jika tidak, tampilkan transkrip teks biasa.
-    summaryBox.innerHTML = `
-        <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-slate-700 text-sm leading-relaxed slide-up">
-            ${data.summary ? data.summary.replace(/\n/g, '<br>') : (data.text || "Hasil tidak tersedia.")}
-        </div>
-    `;
+    summaryBox.innerHTML = `<div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-slate-700 leading-relaxed">
+        ${data.summary ? data.summary.replace(/\n/g, '<br>') : 'AI selesai, tapi tidak ada rangkuman.'}
+    </div>`;
 }
 
-// Helper: Tampilkan/Sembunyikan Loader
 function showLoader(text) {
     document.getElementById('loaderText').innerText = text;
     loader.classList.remove('hidden');
