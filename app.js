@@ -1,7 +1,7 @@
 const videoInput = document.getElementById('videoUrl');
 const loader = document.getElementById('loader');
 
-// 1. Fitur Paste Otomatis
+// Fitur Paste
 document.getElementById('btnPaste').addEventListener('click', async () => {
     try {
         const text = await navigator.clipboard.readText();
@@ -9,7 +9,7 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
     } catch (e) { videoInput.focus(); }
 });
 
-// 2. Fitur Download Video
+// Fitur Download
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Tempel link videonya dulu!");
@@ -23,13 +23,12 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
             document.getElementById('videoTitle').innerText = v.title || "Video Ditemukan";
             document.getElementById('finalDownload').href = v.play || v.url;
             document.getElementById('videoResult').classList.remove('hidden');
-            document.getElementById('aiResult').classList.add('hidden');
         } else { alert("Video tidak ditemukan."); }
     } catch (e) { alert("Error koneksi."); }
     hideLoader();
 });
 
-// 3. Fit Fitur AI (BEDAH ISI) - SESUAI DOKUMEN 2026
+// Fitur AI - MENIRU PERSIS LOGIKA DOKUMEN YANG BOS KIRIM
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Masukkan link video!");
@@ -41,10 +40,8 @@ document.getElementById('btnAi').addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 audio_url: url,
-                // Berdasarkan Tips Dokumen: Gunakan universal-3-pro
-                speech_model: "universal-3-pro", 
-                language_code: "id",
-                // Fitur Audio Intelligence
+                language_detection: true, // Sesuai dokumen
+                speech_models: ["universal-3-pro", "universal-2"], // Sesuai dokumen
                 summarization: true,
                 summary_model: "informative",
                 summary_type: "bullets"
@@ -55,7 +52,7 @@ document.getElementById('btnAi').addEventListener('click', async () => {
         if(initialData.id) {
             checkAiStatus(initialData.id);
         } else {
-            throw new Error(initialData.error || "Gagal memproses video.");
+            throw new Error(initialData.error || "Gagal inisialisasi AI");
         }
     } catch (e) {
         alert("Gagal: " + e.message);
@@ -68,34 +65,24 @@ async function checkAiStatus(id) {
         try {
             const res = await fetch(`/api/process-ai?id=${id}`);
             const data = await res.json();
-            
+
             if (data.status === 'completed') {
                 clearInterval(interval);
-                showAiResult(data);
+                hideLoader();
+                document.getElementById('videoResult').classList.add('hidden');
+                document.getElementById('aiResult').classList.remove('hidden');
+                // Tampilkan hasil rangkuman
+                document.getElementById('aiSummary').innerText = data.summary || data.text;
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI Gagal: " + (data.error || "Cek kembali link video."));
+                alert("AI Gagal: " + data.error);
                 hideLoader();
             }
         } catch (e) {
             clearInterval(interval);
             hideLoader();
         }
-    }, 3000);
-}
-
-function showAiResult(data) {
-    hideLoader();
-    document.getElementById('videoResult').classList.add('hidden');
-    document.getElementById('aiResult').classList.remove('hidden');
-    
-    const summaryBox = document.getElementById('aiSummary');
-    // Menampilkan rangkuman dalam box yang rapi
-    summaryBox.innerHTML = `
-        <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-slate-700 text-sm leading-relaxed">
-            ${data.summary ? data.summary.replace(/\n/g, '<br>') : 'Tidak ada rangkuman yang dihasilkan.'}
-        </div>
-    `;
+    }, 3000); // Polling setiap 3 detik sesuai dokumen
 }
 
 function showLoader(text) {
