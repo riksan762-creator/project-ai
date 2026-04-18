@@ -47,7 +47,8 @@ document.getElementById('btnAi').addEventListener('click', async () => {
             body: JSON.stringify({
                 audio_url: url,
                 language_code: "id",
-                speech_model: "universal-3-pro", // TAMBAHAN: Agar tidak error speech_models
+                // Perbaikan Final: Menggunakan speech_models dengan format array sesuai dokumentasi terbaru
+                speech_models: ["universal-3-pro"], 
                 auto_highlights: true,
                 summarization: true,
                 summary_type: "bullets"
@@ -58,7 +59,7 @@ document.getElementById('btnAi').addEventListener('click', async () => {
         if(initialData.id) {
             checkAiStatus(initialData.id);
         } else {
-            // Jika masih error, tampilkan detail pesan errornya
+            // Tampilkan pesan error dari server jika ada
             throw new Error(initialData.error || initialData.message || "Gagal inisialisasi AI");
         }
     } catch (e) {
@@ -78,7 +79,7 @@ async function checkAiStatus(id) {
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI mengalami gangguan saat memproses: " + data.error);
+                alert("AI mengalami gangguan saat memproses: " + (data.error || "Unknown Error"));
                 hideLoader();
             }
         } catch (e) {
