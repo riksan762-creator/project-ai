@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="no-referrer">
+    <title>Riksan Project | AI Content Factory</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="flex flex-col items-center px-4 py-8">
+
+    <div class="w-full max-w-xl space-y-8">
+        
+        <header class="text-center space-y-3">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-white">
+                RIKSAN <span class="text-indigo-400">PROJECT</span>
+            </h1>
+            <div class="flex justify-center gap-2">
+                <span class="tag">AI FACTORY v1.0</span>
+                <span class="tag">MULTI-DOWNLOADER</span>
+            </div>
+        </header>
+
+        <div class="premium-card p-6 md:p-8 shadow-2xl space-y-6">
+            <div class="space-y-4">
+                <div class="input-group">
+                    <input type="text" id="videoUrl" placeholder="Tempel link TikTok, YT, atau IG..." 
+                        class="w-full bg-transparent py-4 px-4 text-slate-800 outline-none font-semibold">
+                    <button id="btnPaste" class="paste-btn">TEMPEL</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button id="btnDownload" class="btn-main flex items-center justify-center gap-2">
+                        <span>DOWNLOAD VIDEO</span>
+                    </button>
+                    <button id="btnAi" class="btn-ai flex items-center justify-center gap-2">
+                        <span>BEDAH ISI (AI)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loader" class="hidden text-center py-10">
+            <div class="spinner"></div>
+            <p id="loaderText" class="text-white text-xs font-bold mt-4 animate-pulse uppercase tracking-[0.3em]">Processing...</p>
+        </div>
+
+        <div id="videoResult" class="hidden premium-card overflow-hidden slide-up">
+            <div class="relative">
+                <img id="thumb" src="" class="w-full aspect-video object-cover">
+                <div class="absolute top-4 left-4">
+                    <span class="bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">PREVIEW</span>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <h3 id="videoTitle" class="font-bold text-slate-800 text-lg leading-tight"></h3>
+                <a id="finalDownload" href="#" target="_blank" class="btn-main block text-center shadow-xl">
+                    SIMPAN KE GALERI
+                </a>
+            </div>
+        </div>
+
+        <div id="aiResult" class="hidden premium-card p-6 md:p-8 space-y-5 slide-up">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-indigo-600 font-black text-xs uppercase tracking-widest">Analisis AI Berhasil</span>
+                </div>
+                <span class="text-[10px] font-bold text-slate-400">RIKSAN ENGINE v1</span>
+            </div>
+            
+            <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                <p id="aiSummary" class="text-slate-700 text-sm leading-relaxed italic"></p>
+            </div>
+
+            <div id="aiHighlights" class="space-y-3">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Momen Penting (Timestamps):</p>
+                </div>
+        </div>
+
+        <footer class="text-center py-12">
+            <p class="text-white/20 text-[9px] font-black tracking-[0.5em] uppercase italic">
+                Developed for Riksan Project Business Ecosystem
+            </p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+                      </html>
