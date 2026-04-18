@@ -9,7 +9,7 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
     } catch (e) { videoInput.focus(); }
 });
 
-// Fitur Download Video (Multi-Platform)
+// Fitur Download Video
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Tempel link videonya dulu, Bos!");
@@ -26,15 +26,13 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
             document.getElementById('videoResult').classList.remove('hidden');
             document.getElementById('aiResult').classList.add('hidden');
         } else {
-            alert("Video tidak ditemukan atau private.");
+            alert("Video tidak ditemukan.");
         }
-    } catch (e) {
-        alert("Error koneksi ke downloader.");
-    }
+    } catch (e) { alert("Error koneksi."); }
     hideLoader();
 });
 
-// Fitur AI Content Factory (Versi Perbaikan Final)
+// Fitur AI Content Factory (FIX: Menambahkan summary_model)
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Masukkan link video untuk dibedah!");
@@ -46,11 +44,10 @@ document.getElementById('btnAi').addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 audio_url: url,
-                // Model Universal akan mendeteksi Bahasa Indonesia secara otomatis
-                speech_models: ["universal-3-pro", "universal-2"], 
-                auto_highlights: true,
+                speech_models: ["universal-3-pro", "universal-2"],
                 summarization: true,
-                summary_type: "bullets"
+                summary_type: "bullets",
+                summary_model: "informative" // TAMBAHKAN BARIS INI BIAR GA EROR
             })
         });
         
@@ -71,19 +68,15 @@ async function checkAiStatus(id) {
         try {
             const res = await fetch(`/api/process-ai?id=${id}`);
             const data = await res.json();
-
             if (data.status === 'completed') {
                 clearInterval(interval);
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI mengalami gangguan: " + (data.error || "Proses gagal."));
+                alert("AI Gagal memproses.");
                 hideLoader();
             }
-        } catch (e) {
-            clearInterval(interval);
-            hideLoader();
-        }
+        } catch (e) { clearInterval(interval); }
     }, 3000);
 }
 
@@ -94,16 +87,13 @@ function showAiResult(data) {
     document.getElementById('aiSummary').innerText = data.summary || "Berhasil membedah isi konten.";
     
     const container = document.getElementById('aiHighlights');
-    container.innerHTML = '<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Momen Penting:</p>';
+    container.innerHTML = '<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Hasil Bedah AI:</p>';
     
-    if (data.auto_highlights_result && data.auto_highlights_result.results) {
-        data.auto_highlights_result.results.forEach(item => {
-            const el = document.createElement('div');
-            el.className = "bg-slate-50 p-3 rounded-xl border flex justify-between text-[11px] font-bold text-indigo-600 mb-2 slide-up";
-            el.innerHTML = `<span># ${item.text}</span> <span class="text-slate-400">${(item.timestamps[0].start / 1000).toFixed(0)}s</span>`;
-            container.appendChild(el);
-        });
-    }
+    // Tampilkan rangkuman dalam format teks rapi
+    const el = document.createElement('div');
+    el.className = "bg-slate-50 p-4 rounded-xl border text-[13px] text-slate-700 leading-relaxed slide-up";
+    el.innerText = data.summary;
+    container.appendChild(el);
 }
 
 function showLoader(text) {
