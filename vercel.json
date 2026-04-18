@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/process-ai",
+      "destination": "/api/process-ai.js"
+    }
+  ],
+  "env": {
+    "ASSEMBLY_KEY": "@assembly_key"
+  }
+}
