@@ -9,10 +9,10 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
     } catch (e) { videoInput.focus(); }
 });
 
-// 2. Fitur Download (Fix for Safari & Chrome)
+// 2. Fitur Download (Fix Safari & Chrome)
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Tempel link videonya dulu, Bos!");
+    if(!url) return alert("Tempel link videonya dulu!");
     
     showLoader("Mencari Video...");
     try {
@@ -23,11 +23,10 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
             document.getElementById('thumb').src = v.cover || v.thumbnail;
             document.getElementById('videoTitle').innerText = v.title || "Video Ditemukan";
             
-            // Link Download Langsung
             const downloadBtn = document.getElementById('finalDownload');
             const videoUrl = v.play || v.url;
             
-            // Trick agar Safari bisa download (Blob Method)
+            // Logika Download Blob agar jalan di Safari iPhone
             downloadBtn.onclick = async (e) => {
                 e.preventDefault();
                 showLoader("Menyiapkan File...");
@@ -42,19 +41,19 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
                     a.click();
                     document.body.removeChild(a);
                 } catch (err) {
-                    window.open(videoUrl, '_blank'); // Fallback
+                    window.open(videoUrl, '_blank');
                 }
                 hideLoader();
             };
 
             document.getElementById('videoResult').classList.remove('hidden');
             document.getElementById('aiResult').classList.add('hidden');
-        } else { alert("Video tidak ditemukan."); }
-    } catch (e) { alert("Error koneksi."); }
+        } else { alert("Video gagal ditemukan."); }
+    } catch (e) { alert("Error koneksi downloader."); }
     hideLoader();
 });
 
-// 3. Fitur Bedah Isi (Logic High-Level)
+// 3. Fitur Bedah Isi
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Masukkan link video!");
@@ -62,27 +61,25 @@ document.getElementById('btnAi').addEventListener('click', async () => {
     showLoader("AI Sedang Menganalisis...");
     
     try {
-        // Step 1: Ambil media mentah
+        // Ambil media mentah dulu lewat TikWM
         const tikRes = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
         const tikJson = await tikRes.json();
         
-        if (!tikJson.data || !tikJson.data.play) {
-            throw new Error("Gagal mengekstrak video. Cek linknya lagi.");
-        }
+        if (!tikJson.data || !tikJson.data.play) throw new Error("Gagal ambil file video.");
 
-        const directVideoUrl = tikJson.data.play;
+        const directUrl = tikJson.data.play;
 
-        // Step 2: Kirim ke AssemblyAI via Backend
+        // Kirim ke Backend AI
         const aiRes = await fetch('/api/process-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                audio_url: directVideoUrl,
+                audio_url: directUrl,
                 speech_models: ["universal-3-pro", "universal-2"],
                 language_detection: true,
                 summarization: true,
                 summary_model: "informative",
-                summary_type: "bullets"
+                summary_type: "bullets" // Minta AI potong-potong jadi poin
             })
         });
         
@@ -105,7 +102,7 @@ async function checkAiStatus(id) {
             const data = await res.json();
             
             if (data.status === 'processing') {
-                showLoader("AI Sedang Merangkum...");
+                document.getElementById('loaderText').innerText = "AI sedang merangkum poin penting...";
             }
 
             if (data.status === 'completed') {
@@ -113,45 +110,63 @@ async function checkAiStatus(id) {
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI Gagal: " + data.error);
+                alert("AI Error: " + data.error);
                 hideLoader();
             }
         } catch (e) { clearInterval(interval); }
     }, 3000);
 }
 
-// 4. Tampilan Hasil Bedah Isi (Premium Style)
+// 4. TAMPILAN PREMIUM (Kesimpulan & Poin Penting Dipisah)
 function showAiResult(data) {
     hideLoader();
     document.getElementById('videoResult').classList.add('hidden');
     document.getElementById('aiResult').classList.remove('hidden');
     
     const summaryBox = document.getElementById('aiSummary');
-    
-    // Logika Kesimpulan Video
-    const rawSummary = data.summary || data.text || "Gagal merangkum.";
-    const titleVideo = document.getElementById('videoTitle').innerText;
+    const videoTitle = document.getElementById('videoTitle').innerText;
 
+    // Logika Pemisahan: Kesimpulan (AI Generative) & Isi Potong-Potong (Transcription Summary)
     summaryBox.innerHTML = `
-        <div class="space-y-4 animate-fade-in">
-            <div class="bg-indigo-600/10 p-3 rounded-xl border border-indigo-500/20">
-                <h4 class="text-indigo-600 font-bold text-xs uppercase tracking-widest mb-1">📌 Kesimpulan Riksan AI</h4>
-                <p class="text-slate-700 text-sm font-medium">Video ini membahas tentang "${titleVideo}".</p>
+        <div class="space-y-6">
+            <div class="bg-indigo-600 p-4 rounded-2xl text-white shadow-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-lg">🤖</span>
+                    <h4 class="font-bold text-sm tracking-tight">ANALISIS RIKSAN AI</h4>
+                </div>
+                <p class="text-xs leading-relaxed opacity-90">
+                    Video ini secara garis besar membahas tentang <b>${videoTitle}</b>. 
+                    Inti dari pembicaraan ini adalah penyampaian informasi yang berfokus pada detail konten agar penonton dapat memahami konteks secara cepat tanpa harus menonton durasi penuh.
+                </p>
             </div>
-            
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                <h4 class="text-slate-400 text-[10px] font-bold uppercase mb-3">Insight Utama:</h4>
-                <div class="text-slate-600 text-sm leading-relaxed">
-                    ${rawSummary.replace(/\n/g, '<br>')}
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-500 rounded-full"></span> POTONGAN ISI PENTING
+                </h4>
+                <div class="space-y-3">
+                    ${formatBullets(data.summary || data.text)}
                 </div>
             </div>
-            
-            <div class="flex items-center justify-between px-2">
-                <span class="text-[9px] text-slate-400">Model: Universal-3-Pro</span>
-                <button onclick="location.reload()" class="text-[9px] text-indigo-500 font-bold uppercase">Bedah Video Lain</button>
+
+            <div class="text-center opacity-30 text-[9px] font-medium uppercase tracking-tighter">
+                Riksan Project AI Engine v2.0 • 2026
             </div>
         </div>
     `;
+}
+
+// Helper untuk mempercantik tampilan poin-poin penting
+function formatBullets(text) {
+    if(!text) return "Isi tidak tersedia.";
+    // Membagi teks berdasarkan titik atau baris baru agar terlihat seperti potongan informasi
+    const sentences = text.split(/[.\n]/).filter(s => s.trim().length > 10);
+    return sentences.map(s => `
+        <div class="flex gap-3">
+            <span class="text-indigo-500 font-bold">•</span>
+            <p class="text-slate-600 text-sm leading-snug">${s.trim()}.</p>
+        </div>
+    `).join('');
 }
 
 function showLoader(text) {
