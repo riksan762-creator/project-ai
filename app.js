@@ -34,7 +34,7 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
     hideLoader();
 });
 
-// Fitur AI Content Factory (Memanggil Serverless Function)
+// Fitur AI Content Factory (Versi Perbaikan Final)
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Masukkan link video untuk dibedah!");
@@ -46,9 +46,8 @@ document.getElementById('btnAi').addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 audio_url: url,
-                language_code: "id",
-                // Perbaikan Final: Menggunakan speech_models dengan format array sesuai dokumentasi terbaru
-                speech_models: ["universal-3-pro"], 
+                // Model Universal akan mendeteksi Bahasa Indonesia secara otomatis
+                speech_models: ["universal-3-pro", "universal-2"], 
                 auto_highlights: true,
                 summarization: true,
                 summary_type: "bullets"
@@ -59,7 +58,6 @@ document.getElementById('btnAi').addEventListener('click', async () => {
         if(initialData.id) {
             checkAiStatus(initialData.id);
         } else {
-            // Tampilkan pesan error dari server jika ada
             throw new Error(initialData.error || initialData.message || "Gagal inisialisasi AI");
         }
     } catch (e) {
@@ -79,7 +77,7 @@ async function checkAiStatus(id) {
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI mengalami gangguan saat memproses: " + (data.error || "Unknown Error"));
+                alert("AI mengalami gangguan: " + (data.error || "Proses gagal."));
                 hideLoader();
             }
         } catch (e) {
