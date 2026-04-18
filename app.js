@@ -12,8 +12,7 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
 // 2. Fitur Download Video
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Tempel link videonya dulu, Bos!");
-
+    if(!url) return alert("Tempel link videonya dulu!");
     showLoader("Mencari Video...");
     try {
         const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
@@ -25,28 +24,28 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
             document.getElementById('finalDownload').href = v.play || v.url;
             document.getElementById('videoResult').classList.remove('hidden');
             document.getElementById('aiResult').classList.add('hidden');
-        } else {
-            alert("Video tidak ditemukan atau private.");
-        }
-    } catch (e) { alert("Error koneksi downloader."); }
+        } else { alert("Video tidak ditemukan."); }
+    } catch (e) { alert("Error koneksi."); }
     hideLoader();
 });
 
-// 3. Fitur AI (BEDAH ISI) - FIX 100% SESUAI DOKUMENTASI
+// 3. Fit Fitur AI (BEDAH ISI) - SESUAI DOKUMEN 2026
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
-    if(!url) return alert("Masukkan link video dulu!");
+    if(!url) return alert("Masukkan link video!");
 
-    showLoader("AI Sedang Membedah Konten...");
+    showLoader("AI Sedang Menganalisis...");
     try {
         const start = await fetch('/api/process-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 audio_url: url,
-                speech_model: "best",      // Gunakan 'best' agar summarization aktif
-                language_code: "id",       // Paksa ke Bahasa Indonesia
-                summarization: true,       // Aktifkan rangkuman
+                // Berdasarkan Tips Dokumen: Gunakan universal-3-pro
+                speech_model: "universal-3-pro", 
+                language_code: "id",
+                // Fitur Audio Intelligence
+                summarization: true,
                 summary_model: "informative",
                 summary_type: "bullets"
             })
@@ -56,7 +55,7 @@ document.getElementById('btnAi').addEventListener('click', async () => {
         if(initialData.id) {
             checkAiStatus(initialData.id);
         } else {
-            throw new Error(initialData.error || "Gagal inisialisasi AI");
+            throw new Error(initialData.error || "Gagal memproses video.");
         }
     } catch (e) {
         alert("Gagal: " + e.message);
@@ -69,13 +68,13 @@ async function checkAiStatus(id) {
         try {
             const res = await fetch(`/api/process-ai?id=${id}`);
             const data = await res.json();
-
+            
             if (data.status === 'completed') {
                 clearInterval(interval);
                 showAiResult(data);
             } else if (data.status === 'error') {
                 clearInterval(interval);
-                alert("AI Gagal: " + (data.error || "Pastikan link video benar."));
+                alert("AI Gagal: " + (data.error || "Cek kembali link video."));
                 hideLoader();
             }
         } catch (e) {
@@ -91,10 +90,12 @@ function showAiResult(data) {
     document.getElementById('aiResult').classList.remove('hidden');
     
     const summaryBox = document.getElementById('aiSummary');
-    // Menampilkan hasil rangkuman dengan rapi
-    summaryBox.innerHTML = `<div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-slate-700 leading-relaxed">
-        ${data.summary ? data.summary.replace(/\n/g, '<br>') : 'Hasil tidak ditemukan.'}
-    </div>`;
+    // Menampilkan rangkuman dalam box yang rapi
+    summaryBox.innerHTML = `
+        <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-slate-700 text-sm leading-relaxed">
+            ${data.summary ? data.summary.replace(/\n/g, '<br>') : 'Tidak ada rangkuman yang dihasilkan.'}
+        </div>
+    `;
 }
 
 function showLoader(text) {
