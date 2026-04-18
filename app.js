@@ -9,46 +9,56 @@ document.getElementById('btnPaste').addEventListener('click', async () => {
     } catch (e) { videoInput.focus(); }
 });
 
-// 2. Fitur Download (Universal: TikTok, YT, IG)
+// 2. Logika Universal: Ambil Data Media (TikTok, YT, IG)
+async function getMediaData(url) {
+    // Gunakan Cobalt API karena mendukung multi-platform & bebas CORS jika lewat backend
+    // Tapi untuk preview cepat, kita coba deteksi platform
+    if (url.includes('tiktok.com')) {
+        const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
+        const json = await res.json();
+        return {
+            directUrl: json.data.play,
+            title: json.data.title || "TikTok Video",
+            thumb: json.data.cover
+        };
+    } else {
+        // Untuk YT & IG, kita panggil proxy backend kita agar tidak "Failed to Fetch"
+        // Proxy ini nanti akan memanggil Cobalt API di sisi server
+        const res = await fetch('/api/get-media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+        });
+        const json = await res.json();
+        return {
+            directUrl: json.url,
+            title: "Media Terdeteksi",
+            thumb: "https://cdn-icons-png.flaticon.com/512/1384/1384060.png"
+        };
+    }
+}
+
+// 3. Tombol Cari Video (Untuk Download & Preview)
 document.getElementById('btnDownload').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Tempel link videonya dulu!");
     
     showLoader("Mencari Media...");
     try {
-        let finalMediaUrl = "";
-        let title = "Video Ditemukan";
-
-        if (url.includes('tiktok.com')) {
-            const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
-            const json = await res.json();
-            finalMediaUrl = json.data.play;
-            title = json.data.title || "TikTok Video";
-            document.getElementById('thumb').src = json.data.cover;
-        } 
-        else if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('instagram.com')) {
-            // Pakai Cobalt API untuk YT & IG
-            const res = await fetch('https://api.cobalt.tools/api/json', {
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url, videoQuality: '720' })
-            });
-            const json = await res.json();
-            if(json.url) {
-                finalMediaUrl = json.url;
-                document.getElementById('thumb').src = "https://cdn-icons-png.flaticon.com/512/1384/1384060.png"; // Placeholder
-            } else { throw new Error("Gagal mengambil data dari YouTube/IG."); }
-        }
-
-        if(finalMediaUrl) {
-            document.getElementById('videoTitle').innerText = title;
+        const media = await getMediaData(url);
+        
+        if(media.directUrl) {
+            document.getElementById('thumb').src = media.thumb;
+            document.getElementById('videoTitle').innerText = media.title;
+            
             const downloadBtn = document.getElementById('finalDownload');
             
+            // Fix Download untuk Safari/Chrome (Blob Method)
             downloadBtn.onclick = async (e) => {
                 e.preventDefault();
-                showLoader("Menyiapkan File...");
+                showLoader("Mengunduh File...");
                 try {
-                    const response = await fetch(finalMediaUrl);
+                    const response = await fetch(media.directUrl);
                     const blob = await response.blob();
                     const blobUrl = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -57,52 +67,32 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                } catch (err) { window.open(finalMediaUrl, '_blank'); }
+                } catch (err) { window.open(media.directUrl, '_blank'); }
                 hideLoader();
             };
 
             document.getElementById('videoResult').classList.remove('hidden');
             document.getElementById('aiResult').classList.add('hidden');
         }
-    } catch (e) { alert("Error: " + e.message); }
+    } catch (e) { alert("Gagal memuat media. Cek link Anda."); }
     hideLoader();
 });
 
-// 3. Fitur Bedah Isi (Deep Analysis Universal)
+// 4. Tombol Bedah Isi (AI Deep Analysis)
 document.getElementById('btnAi').addEventListener('click', async () => {
     const url = videoInput.value.trim();
     if(!url) return alert("Masukkan link video!");
 
-    showLoader("Mengekstrak Media...");
+    showLoader("AI Sedang Menganalisis...");
     
     try {
-        let directUrl = "";
-
-        // LOGIKA EXTRACTION MEDIA
-        if (url.includes('tiktok.com')) {
-            const tikRes = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
-            const tikJson = await tikRes.json();
-            directUrl = tikJson.data.play;
-        } else {
-            // Gunakan Cobalt untuk ambil audio saja (biar analisis AI lebih cepat)
-            const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url, downloadMode: 'audio', audioFormat: 'mp3' })
-            });
-            const cobaltJson = await cobaltRes.json();
-            directUrl = cobaltJson.url;
-        }
-
-        if (!directUrl) throw new Error("Gagal mengambil file media asli.");
-
-        // KIRIM KE BACKEND AI
-        showLoader("AI Sedang Menganalisis...");
+        // Kirim URL mentah ke Backend. Biarkan Backend yang memproses download filenya
+        // agar tidak terjadi "Failed to Fetch" di browser.
         const aiRes = await fetch('/api/process-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                audio_url: directUrl,
+                audio_url: url, // Backend akan otomatis membedah ini
                 speech_models: ["universal-3-pro"],
                 language_detection: true,
                 summarization: true,
@@ -128,7 +118,7 @@ async function checkAiStatus(id) {
             const data = await res.json();
             
             if (data.status === 'processing') {
-                document.getElementById('loaderText').innerText = "AI sedang menyusun poin penting...";
+                document.getElementById('loaderText').innerText = "Riksan AI sedang menyimpulkan isi...";
             }
 
             if (data.status === 'completed') {
@@ -143,52 +133,49 @@ async function checkAiStatus(id) {
     }, 3000);
 }
 
-// 4. TAMPILAN PREMIUM
+// 5. Tampilan Hasil AI (Rapih & Detail)
 function showAiResult(data) {
     hideLoader();
     document.getElementById('videoResult').classList.add('hidden');
     document.getElementById('aiResult').classList.remove('hidden');
     
     const summaryBox = document.getElementById('aiSummary');
-    const videoTitle = document.getElementById('videoTitle').innerText;
+    const title = document.getElementById('videoTitle').innerText;
+
+    // Memecah hasil AI menjadi poin-poin rapi
+    const rawData = data.summary || data.text || "";
+    const points = rawData.split(/[•\n]/).filter(p => p.trim().length > 10);
 
     summaryBox.innerHTML = `
         <div class="space-y-6">
             <div class="bg-indigo-600 p-5 rounded-[2rem] text-white shadow-xl">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="bg-white/20 p-2 rounded-xl">🤖</span>
-                    <h4 class="font-bold text-xs uppercase tracking-widest">Kesimpulan Riksan AI</h4>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-lg">🤖</span>
+                    <h4 class="font-bold text-[10px] uppercase tracking-widest">Kesimpulan Riksan AI</h4>
                 </div>
-                <p class="text-sm leading-relaxed opacity-95">
-                    Analisis mendalam untuk konten <b>"${videoTitle}"</b> telah selesai. 
-                    AI kami menyimpulkan bahwa isi media ini berfokus pada informasi strategis yang bisa Anda pelajari melalui poin-poin di bawah ini tanpa harus menonton seluruh durasi.
+                <p class="text-[13px] leading-relaxed opacity-90 italic">
+                    "Video ini membahas <b>${title}</b>. AI telah menyaring percakapan penting dan merangkumnya khusus untuk Anda."
                 </p>
             </div>
 
-            <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                <h4 class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span> POTONGAN POIN PENTING
+            <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h4 class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-500 rounded-full"></span> POIN-POIN UTAMA
                 </h4>
                 <div class="space-y-4">
-                    ${formatBullets(data.summary || data.text)}
+                    ${points.map(p => `
+                        <div class="flex gap-3 border-l-4 border-indigo-500 pl-4 py-1">
+                            <p class="text-slate-600 text-[13px] leading-relaxed">${p.trim()}.</p>
+                        </div>
+                    `).join('')}
                 </div>
             </div>
 
-            <div class="text-center opacity-30 text-[9px] font-bold uppercase tracking-widest">
-                Riksan Project • 2026
+            <div class="text-center opacity-20 text-[9px] font-bold uppercase tracking-[0.3em]">
+                Riksan Project AI v2.0
             </div>
         </div>
     `;
-}
-
-function formatBullets(text) {
-    if(!text) return "Isi tidak tersedia.";
-    const sentences = text.split(/[•\n]/).filter(s => s.trim().length > 10);
-    return sentences.map(s => `
-        <div class="flex gap-4 border-l-2 border-indigo-100 pl-4 hover:border-indigo-500 transition-all">
-            <p class="text-slate-600 text-[13px] leading-relaxed">${s.trim()}.</p>
-        </div>
-    `).join('');
 }
 
 function showLoader(text) {
