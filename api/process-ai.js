@@ -13,12 +13,11 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Audio URL required" });
             }
 
-            // INI PERUBAHAN KRUSIALNYA:
-            // 1. Ganti 'speech_model' menjadi 'speech_models'
-            // 2. Isinya HARUS di dalam kurung siku [ ] (Array)
+            // PERUBAHAN FINAL:
+            // Gunakan 'universal-1' atau 'universal-2' dalam format list [ ]
             const payload = {
                 audio_url: audio_url,
-                speech_models: ["nano"], // Gunakan format array sesuai permintaan error
+                speech_models: ["universal-1"], 
                 language_detection: true,
                 punctuate: true,
                 format_text: true
@@ -35,7 +34,6 @@ export default async function handler(req, res) {
 
             const data = await response.json();
             
-            // Jika masih error dari sana, kirim detailnya biar kita tahu
             if (data.error) {
                 return res.status(400).json({ error: data.error });
             }
