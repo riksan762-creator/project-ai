@@ -2,7 +2,7 @@ export default async function handler(req, res) {
     const ASSEMBLY_KEY = process.env.ASSEMBLY_KEY;
 
     if (!ASSEMBLY_KEY) {
-        return res.status(500).json({ error: "ASSEMBLY_KEY is missing" });
+        return res.status(500).json({ error: "API Key AssemblyAI belum ada di environment vercel." });
     }
 
     try {
@@ -10,17 +10,17 @@ export default async function handler(req, res) {
             const { audio_url } = req.body;
 
             if (!audio_url) {
-                return res.status(400).json({ error: "Audio URL required" });
+                return res.status(400).json({ error: "URL Audio tidak ditemukan." });
             }
 
-            // PERUBAHAN FINAL:
-            // Gunakan 'universal-1' atau 'universal-2' dalam format list [ ]
+            // KONFIGURASI PALING PINTAR & TERBARU 2026
             const payload = {
                 audio_url: audio_url,
-                speech_models: ["universal-1"], 
-                language_detection: true,
-                punctuate: true,
-                format_text: true
+                // Gunakan universal-3-pro (Terbaik & Akurat untuk Bahasa Indonesia/Inggris)
+                speech_models: ["universal-3-pro"], 
+                language_detection: true, // Otomatis deteksi bahasa
+                punctuate: true,          // Otomatis tanda baca
+                format_text: true         // Otomatis rapihin teks
             };
 
             const response = await fetch('https://api.assemblyai.com/v2/transcript', {
@@ -33,9 +33,10 @@ export default async function handler(req, res) {
             });
 
             const data = await response.json();
-            
+
             if (data.error) {
-                return res.status(400).json({ error: data.error });
+                // Jika masih ada error dari AssemblyAI, lempar ke sini
+                return res.status(400).json({ error: "Kesalahan API: " + data.error });
             }
 
             return res.status(200).json(data);
@@ -43,6 +44,8 @@ export default async function handler(req, res) {
         
         else if (req.method === 'GET') {
             const { id } = req.query;
+            if (!id) return res.status(400).json({ error: "ID Transkrip wajib ada." });
+
             const response = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
                 headers: { 'Authorization': ASSEMBLY_KEY }
             });
@@ -50,6 +53,6 @@ export default async function handler(req, res) {
             return res.status(200).json(data);
         }
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: "Server Error: " + error.message });
     }
 }
